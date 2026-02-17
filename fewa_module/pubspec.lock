@@ -408,6 +408,13 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.6.11"
+  todo:
+    dependency: transitive
+    description:
+      path: "modules/todo"
+      relative: true
+    source: path
+    version: "1.0.0+1"
   typed_data:
     dependency: transitive
     description:

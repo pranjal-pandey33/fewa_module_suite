@@ -13,6 +13,8 @@ dependencies:
     sdk: flutter
   foundation:
     path: ../../packages/foundation
+  todo:
+    path: ../../modules/todo
 
  
   cupertino_icons: ^1.0.8

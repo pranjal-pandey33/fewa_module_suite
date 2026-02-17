@@ -1,5 +1,6 @@
 name: fewa_module_suite
 description: "A new Flutter project."
+resolution: workspace
 
 publish_to: 'none'
 version: 1.0.0+1
@@ -19,4 +20,3 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-

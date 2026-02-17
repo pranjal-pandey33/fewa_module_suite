@@ -2,15 +2,9 @@ import 'package:foundation/foundation.dart';
 import 'package:test/test.dart';
 
 void main() {
-  group('A group of tests', () {
-    final awesome = Awesome();
-
-    setUp(() {
-      // Additional setup goes here.
-    });
-
-    test('First Test', () {
-      expect(awesome.isAwesome, isTrue);
+  group('foundation', () {
+    test('foundationHello returns expected message', () {
+      expect(foundationHello(), equals('foundation: wired'));
     });
   });
 }

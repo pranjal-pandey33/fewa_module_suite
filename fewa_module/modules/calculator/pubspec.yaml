@@ -1,7 +1,5 @@
-name: fewa_module_suite
+name: calculator
 description: "A new Flutter project."
-resolution: workspace
-
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -13,14 +11,14 @@ dependencies:
     sdk: flutter
   foundation:
     path: ../../packages/foundation
-  todo:
-    path: ../../modules/todo
-  calculator:
-     path: ../../modules/calculator
 
- 
   cupertino_icons: ^1.0.8
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true

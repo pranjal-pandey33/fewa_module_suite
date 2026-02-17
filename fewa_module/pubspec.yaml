@@ -1,0 +1,9 @@
+name: fewa_module_suite_workspace
+publish_to: none
+
+environment:
+  sdk: ^3.9.2
+
+workspace:
+  - apps/launcher
+  - packages/foundation

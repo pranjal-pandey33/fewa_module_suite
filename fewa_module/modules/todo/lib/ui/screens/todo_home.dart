@@ -1,55 +1,32 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:todo/ui/hooks/hook_zones.dart';
 import 'package:todo/ui/layout/todo_scaffold.dart';
 import 'package:todo/ui/widgets/stat_card.dart';
 import 'package:todo/ui/widgets/task_item.dart';
-
-class UiTask {
-  UiTask({
-    required this.title,
-    required this.metadata,
-    required this.done,
-  });
-
-  final String title;
-  final String metadata;
-  bool done;
-}
+import 'package:todo/src/data/todo_task_store.dart';
 
 class TodoHome extends StatefulWidget {
-  const TodoHome({
+  TodoHome({
     super.key,
     required this.calculationEvents,
-  });
+    TodoTaskStore? taskStore,
+  }) : _taskStore = taskStore;
 
   final ValueListenable<int> calculationEvents;
+  final TodoTaskStore? _taskStore;
 
   @override
   State<TodoHome> createState() => _TodoHomeState();
 }
 
 class _TodoHomeState extends State<TodoHome> {
+  late final TodoTaskStore _taskStore = widget._taskStore ?? TodoTaskStore();
+
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _metadataController = TextEditingController();
-
-  final List<UiTask> _tasks = [
-    UiTask(
-      title: 'Finalize invoicing sequence',
-      metadata: 'Due in 2 days • High priority',
-      done: true,
-    ),
-    UiTask(
-      title: 'Link calculation result #182 to task',
-      metadata: 'Due in 4 days • Medium priority',
-      done: false,
-    ),
-    UiTask(
-      title: 'Archive closed projects',
-      metadata: 'No due date • Low priority',
-      done: false,
-    ),
-  ];
 
   @override
   void dispose() {
@@ -64,57 +41,62 @@ class _TodoHomeState extends State<TodoHome> {
       valueListenable: widget.calculationEvents,
       builder: (context, calcCount, _) {
         final theme = Theme.of(context);
-        return TodoScaffold(
-          appBarActions: const _TodoAppBarHookSlot(),
-          onAddTask: () => _openAddTaskSurface(context),
-          body: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text('Dashboard', style: theme.textTheme.titleMedium),
-              const SizedBox(height: 16),
-              StatCard(
-                label: 'Calculation Events Today',
-                value: calcCount.toString(),
-              ),
-              const SizedBox(height: 8),
-              const _DashboardHookSlot(),
-              const SizedBox(height: 16),
-              Text(
-                'Task List',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: _tasks.length,
-                separatorBuilder: (context, index) {
-                  return Divider(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .outline
-                        .withValues(alpha: 0.8),
-                    height: 1,
-                  );
-                },
-                itemBuilder: (context, index) {
-                  final task = _tasks[index];
-                  return TaskItem(
-                    title: task.title,
-                    metadata: task.metadata,
-                    completed: task.done,
-                    onChanged: (value) {
-                      if (value == null) return;
-                      setState(() {
-                        task.done = value;
-                      });
+        return ValueListenableBuilder<List<TodoTask>>(
+          valueListenable: _taskStore.tasks,
+          builder: (context, tasks, _) {
+            return TodoScaffold(
+              appBarActions: const _TodoAppBarHookSlot(),
+              onAddTask: () => _openAddTaskSurface(context),
+              body: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text('Dashboard', style: theme.textTheme.titleMedium),
+                  const SizedBox(height: 16),
+                  StatCard(
+                    label: 'Calculation Events Today',
+                    value: calcCount.toString(),
+                  ),
+                  const SizedBox(height: 8),
+                  const _DashboardHookSlot(),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Task List',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: tasks.length,
+                    separatorBuilder: (context, index) {
+                      return Divider(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .outline
+                            .withValues(alpha: 0.8),
+                        height: 1,
+                      );
                     },
-                    trailingAction: const SizedBox.shrink(),
-                  );
-                },
+                    itemBuilder: (context, index) {
+                      final task = tasks[index];
+                      return TaskItem(
+                        title: task.title,
+                        metadata: task.metadata,
+                        completed: task.done,
+                        onChanged: (value) {
+                          if (value == null) return;
+                          unawaited(
+                            _taskStore.setTaskDone(index: index, done: value),
+                          );
+                        },
+                        trailingAction: const SizedBox.shrink(),
+                      );
+                    },
+                  ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         );
       },
     );
@@ -170,16 +152,13 @@ class _TodoHomeState extends State<TodoHome> {
                       final title = _titleController.text.trim();
                       if (title.isEmpty) return;
 
-                      setState(() {
-                        _tasks.insert(
-                          0,
-                          UiTask(
-                            title: title,
-                            metadata: _metadataController.text.trim(),
-                            done: false,
-                          ),
-                        );
-                      });
+                      unawaited(
+                        _taskStore.addTask(
+                          title: title,
+                          metadata: _metadataController.text.trim(),
+                          done: false,
+                        ),
+                      );
 
                       _titleController.clear();
                       _metadataController.clear();

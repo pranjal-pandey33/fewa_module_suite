@@ -11,5 +11,13 @@ class RouteRegistry {
     return Map.unmodifiable(_routes);
   }
 
+  bool hasRoute(String path) {
+    return _routes.containsKey(path);
+  }
+
+  List<String> get registeredPaths {
+    return List.unmodifiable(_routes.keys);
+  }
+
   void clear() => _routes.clear();
 }

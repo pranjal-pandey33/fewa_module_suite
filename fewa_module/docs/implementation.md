@@ -68,3 +68,52 @@ Refactor the Todo module to enforce clean folder boundaries from `todo_design.md
 
 4. Persistence outcome
 - Task list now survives app restarts because the store serializes and restores task state from JSON on disk.
+
+## New Implementation Update (Task row Edit/Delete)
+
+1. Added row-level actions backed by store mutations
+- `modules/todo/lib/src/data/todo_task_store.dart`
+  - Added `updateTask(...)` for editing title/metadata.
+  - Added `deleteTask(...)` for task removal.
+  - Both operations update `ValueNotifier<List<TodoTask>>` and persist to `todo_tasks.json`.
+
+2. Connected overflow menu actions in task list UI
+- `modules/todo/lib/ui/screens/todo_home.dart`
+  - Added a task row overflow action using `PopupMenuButton`.
+  - Actions:
+    - `Edit`: opens the existing editor bottom sheet pre-filled with current title/metadata and saves via `updateTask`.
+    - `Delete`: removes the row immediately via `deleteTask`.
+- Refactored editor to a shared `_openTaskEditorSheet(...)` used by both Add and Edit flows.
+- Kept list row spacing and touch targets theme-aligned by retaining existing `TaskItem` layout and increasing trailing action slot to menu icon size.
+
+3. Theme/compliance adjustments
+- `modules/todo/lib/ui/widgets/task_item.dart`
+  - Increased trailing action container size to `40x40` for the overflow icon/button hit target while keeping list spacing intact.
+
+## New Implementation Update (Loading + Empty State UX)
+
+1. Added store initialization loading signal
+- `modules/todo/lib/src/data/todo_task_store.dart`
+  - Added `ValueNotifier<bool> isLoading` (defaults to `true`) to expose async init state.
+  - Added non-reentrant init tracking (`_initFuture`) so simultaneous callers share one initialization cycle.
+  - `init()` now sets `isLoading` during file hydration/persistence validation and clears it in `finally`, preventing UI flicker and multiple overlapping loads.
+  - Kept task persistence contract unchanged (`todo_tasks.json` in app documents) and preserved existing `ValueNotifier<List<TodoTask>>` pattern.
+
+2. Added loading skeleton placeholders in task section
+- `modules/todo/lib/ui/screens/todo_home.dart`
+  - Added `_buildTaskSkeletonList` and `_buildTaskSkeletonRow`.
+  - Task section now renders fixed-height list placeholders while `isLoading` is true.
+  - Placeholder geometry matches row height and spacing to avoid layout jank on swap to real data.
+
+3. Added empty state for no tasks
+- `modules/todo/lib/ui/screens/todo_home.dart`
+  - Added `_buildEmptyTaskState` with icon + headline/body text to show when loading is complete and task list is empty.
+  - Preserved theme-driven colors/typography and section spacing.
+
+4. Wired loading lifecycle into UI
+- `modules/todo/lib/ui/screens/todo_home.dart`
+  - `_TodoHomeState` now calls `unawaited(_taskStore.init())` in `initState`.
+  - Build path now listens to `_taskStore.isLoading` before tasks list, and selects between:
+    - skeleton placeholders,
+    - empty state,
+    - or the interactive task list with edit/delete actions.

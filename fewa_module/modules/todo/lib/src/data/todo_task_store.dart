@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -56,46 +57,68 @@ class TodoTaskStore {
       : _fileName = fileName,
         tasks = ValueNotifier<List<TodoTask>>(
           List<TodoTask>.from(
-            initialTasks ??
-                _defaultTasks(),
+            initialTasks ?? const [],
           ),
-        );
+        ),
+        isLoading = ValueNotifier<bool>(true);
 
   final ValueNotifier<List<TodoTask>> tasks;
+  final ValueNotifier<bool> isLoading;
   final String _fileName;
 
   File? _file;
   bool _loaded = false;
+  Future<void>? _initFuture;
 
   Future<void> init() async {
     if (_loaded) return;
-
-    await _ensureFile();
-
-    if (!await _file!.exists()) {
-      await _persist();
-      _loaded = true;
+    if (_initFuture != null) {
+      await _initFuture;
       return;
     }
 
-    final raw = await _file!.readAsString();
+    _initFuture = _initialize();
     try {
-      final decoded = jsonDecode(raw);
-      if (decoded is Map<String, dynamic>) {
-        final rawTasks = decoded['tasks'];
-        if (rawTasks is List) {
-          tasks.value = rawTasks
-              .whereType<Map<String, dynamic>>()
-              .map(TodoTask.fromJson)
-              .toList();
-          _loaded = true;
-          return;
-        }
-      }
-    } catch (_) {}
+      await _initFuture;
+    } finally {
+      _initFuture = null;
+    }
+  }
 
-    await _persist();
-    _loaded = true;
+  Future<void> _initialize() async {
+    isLoading.value = true;
+
+    try {
+      await _ensureFile();
+
+      if (!await _file!.exists()) {
+        await _persist();
+        _loaded = true;
+        return;
+      }
+
+      final raw = await _file!.readAsString();
+      try {
+        final decoded = jsonDecode(raw);
+        if (decoded is Map<String, dynamic>) {
+          final rawTasks = decoded['tasks'];
+          if (rawTasks is List) {
+            tasks.value = rawTasks
+                .whereType<Map<String, dynamic>>()
+                .map(TodoTask.fromJson)
+                .toList();
+            _loaded = true;
+            return;
+          }
+        }
+      } catch (_) {}
+
+      await _persist();
+      _loaded = true;
+    } finally {
+      isLoading.value = false;
+      _loaded = true;
+    }
   }
 
   Future<void> addTask({
@@ -129,6 +152,34 @@ class TodoTaskStore {
     await _persist();
   }
 
+  Future<void> updateTask({
+    required int index,
+    required String title,
+    required String metadata,
+    bool? done,
+  }) async {
+    if (index < 0 || index >= tasks.value.length) return;
+
+    final updated = List<TodoTask>.from(tasks.value);
+    final current = updated[index];
+    updated[index] = current.copyWith(
+      title: title,
+      metadata: metadata,
+      done: done ?? current.done,
+    );
+    tasks.value = updated;
+    await _persist();
+  }
+
+  Future<void> deleteTask({required int index}) async {
+    if (index < 0 || index >= tasks.value.length) return;
+
+    final updated = List<TodoTask>.from(tasks.value);
+    updated.removeAt(index);
+    tasks.value = updated;
+    await _persist();
+  }
+
   Future<void> _persist() async {
     await _ensureFile();
 
@@ -145,28 +196,8 @@ class TodoTaskStore {
     _file = File('${dir.path}/$_fileName');
   }
 
-  static List<TodoTask> _defaultTasks() {
-    final now = DateTime.now();
-
-    return [
-      TodoTask(
-        title: 'Finalize invoicing sequence',
-        metadata: 'Due in 2 days • High priority',
-        done: true,
-        createdAt: now.subtract(const Duration(days: 3)),
-      ),
-      TodoTask(
-        title: 'Link calculation result #182 to task',
-        metadata: 'Due in 4 days • Medium priority',
-        done: false,
-        createdAt: now.subtract(const Duration(days: 1)),
-      ),
-      TodoTask(
-        title: 'Archive closed projects',
-        metadata: 'No due date • Low priority',
-        done: false,
-        createdAt: now,
-      ),
-    ];
+  void dispose() {
+    tasks.dispose();
+    isLoading.dispose();
   }
 }

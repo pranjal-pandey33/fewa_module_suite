@@ -148,3 +148,47 @@ Refactor the Todo module to enforce clean folder boundaries from `todo_design.md
   - Added filtered task mapping in `_buildTaskSection` and `_filteredTaskEntries(...)` so filtering only affects rendering.
   - Kept store update paths (`setTaskDone`, `updateTask`, `deleteTask`) intact.
   - Resolved actions in filtered mode using original task index from `MapEntry.key` to avoid index mismatch.
+
+## New Implementation Update (Task Form Validation)
+
+1. Added add/edit task validation in Todo task editor
+- `modules/todo/lib/ui/screens/todo_home.dart`
+  - Replaced title `TextField` with `Form` + `TextFormField`.
+  - Added required title validation and trim-based empty check.
+  - Added title max length limit using `_maxTaskTitleLength = 120`.
+  - Error messages are displayed inline through `TextFormField` validation and default `Theme` error styling.
+  - Submission now blocked when validation fails, preventing empty tasks and over-length titles from being saved.
+
+## New Implementation Update (Task List Performance)
+
+1. Shifted task list rendering to scoped builder-based rendering
+- `modules/todo/lib/ui/screens/todo_home.dart`
+  - Kept task loading/state listeners limited to `_buildTaskSection` via nested `ValueListenableBuilder` usage.
+  - The scaffold/header sections are not wrapped in task listeners, reducing rebuild scope.
+
+2. Optimized list construction
+- `modules/todo/lib/ui/screens/todo_home.dart`
+  - `_buildTaskList` and `_buildTaskSkeletonList` now use `ListView.builder`.
+  - Each displayed task row uses a stable `ValueKey` derived from task `createdAt` to preserve row state.
+  - `TaskItem` trailing menu is also keyed to task identity to avoid widget churn.
+
+## New Implementation Update (Structured Debug Logging)
+
+1. Added debug-only structured logs for task CRUD
+- `modules/todo/lib/src/data/todo_task_store.dart`
+  - Added a debug-flagged logger helper that prints JSON-structured events via `debugPrint`.
+  - Logged lifecycle and mutation events for:
+    - initialize (`todo.task_store.init.*`)
+    - add task
+    - update task
+    - delete task
+    - toggle done
+    - persistence
+  - Added structured `tasks_mutated` follow-up events with operation metadata and counts.
+
+2. Added debug-only structured logs for projection updates
+- `modules/todo/lib/src/data/todo_projection_store.dart`
+  - Logged projection lifecycle and update events for:
+    - initialize (`todo.projection_store.init.*`)
+    - increment updates
+    - persistence writes

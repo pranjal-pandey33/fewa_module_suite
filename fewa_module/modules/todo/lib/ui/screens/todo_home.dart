@@ -27,6 +27,7 @@ class TodoHome extends StatefulWidget {
 }
 
 enum _TaskFilter { all, active, completed }
+const _maxTaskTitleLength = 120;
 
 class _TodoHomeState extends State<TodoHome> {
   late final TodoTaskStore _taskStore = widget._taskStore ?? TodoTaskStore();
@@ -40,50 +41,39 @@ class _TodoHomeState extends State<TodoHome> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return TodoScaffold(
+      appBarActions: _buildAppBarHookActions(),
+      onAddTask: () => _openAddTaskSurface(context),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Dashboard', style: theme.textTheme.titleMedium),
+          const SizedBox(height: 16),
+          _buildCalculationStatCard(),
+          const SizedBox(height: 8),
+          _buildDashboardHookCards(),
+          const SizedBox(height: 16),
+          Text(
+            'Task List',
+            style: theme.textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          _buildTaskFilterBar(theme: theme),
+          const SizedBox(height: 8),
+          _buildTaskSection(context: context, theme: theme),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCalculationStatCard() {
     return ValueListenableBuilder<int>(
       valueListenable: widget.calculationEvents,
       builder: (context, calcCount, _) {
-        final theme = Theme.of(context);
-        return ValueListenableBuilder<bool>(
-          valueListenable: _taskStore.isLoading,
-          builder: (context, isLoading, _) {
-            return ValueListenableBuilder<List<TodoTask>>(
-              valueListenable: _taskStore.tasks,
-              builder: (context, tasks, _) {
-            return TodoScaffold(
-              appBarActions: _buildAppBarHookActions(),
-              onAddTask: () => _openAddTaskSurface(context),
-              body: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text('Dashboard', style: theme.textTheme.titleMedium),
-                  const SizedBox(height: 16),
-                  StatCard(
-                    label: 'Calculation Events Today',
-                    value: calcCount.toString(),
-                  ),
-                  const SizedBox(height: 8),
-                  _buildDashboardHookCards(),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Task List',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 8),
-                  _buildTaskFilterBar(theme: theme),
-                  const SizedBox(height: 8),
-                  _buildTaskSection(
-                    context: context,
-                    isLoading: isLoading,
-                    tasks: tasks,
-                    theme: theme,
-                  ),
-                ],
-              ),
-            );
-              },
-            );
-          },
+        return StatCard(
+          label: 'Calculation Events Today',
+          value: calcCount.toString(),
         );
       },
     );
@@ -191,22 +181,30 @@ class _TodoHomeState extends State<TodoHome> {
   Widget _buildTaskSection({
     required BuildContext context,
     required ThemeData theme,
-    required bool isLoading,
-    required List<TodoTask> tasks,
   }) {
-    if (isLoading) {
-      return _buildTaskSkeletonList(theme: theme);
-    }
+    return ValueListenableBuilder<bool>(
+      valueListenable: _taskStore.isLoading,
+      builder: (context, isLoading, _) {
+        return ValueListenableBuilder<List<TodoTask>>(
+          valueListenable: _taskStore.tasks,
+          builder: (context, tasks, _) {
+            if (isLoading) {
+              return _buildTaskSkeletonList(theme: theme);
+            }
 
-    final filteredTasks = _filteredTaskEntries(tasks);
-    if (filteredTasks.isEmpty) {
-      return _buildEmptyTaskState(theme: theme);
-    }
+            final filteredTasks = _filteredTaskEntries(tasks);
+            if (filteredTasks.isEmpty) {
+              return _buildEmptyTaskState(theme: theme);
+            }
 
-    return _buildTaskList(
-      theme: theme,
-      tasks: filteredTasks,
-      context: context,
+            return _buildTaskList(
+              theme: theme,
+              tasks: filteredTasks,
+              context: context,
+            );
+          },
+        );
+      },
     );
   }
 
@@ -215,21 +213,27 @@ class _TodoHomeState extends State<TodoHome> {
     required ThemeData theme,
     required List<MapEntry<int, TodoTask>> tasks,
   }) {
-    return ListView.separated(
+    final trailingHookEntries = _taskTrailingHookEntries(theme: theme);
+    final itemCount = tasks.isNotEmpty ? tasks.length * 2 - 1 : 0;
+    final divider = Divider(
+      color: theme.colorScheme.outline.withValues(alpha: 0.8),
+      height: 1,
+    );
+
+    return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: tasks.length,
-      separatorBuilder: (context, index) {
-        return Divider(
-          color: theme.colorScheme.outline.withValues(alpha: 0.8),
-          height: 1,
-        );
-      },
+      itemCount: itemCount,
       itemBuilder: (context, index) {
-        final taskEntry = tasks[index];
+        if (index.isOdd) {
+          return divider;
+        }
+
+        final taskEntry = tasks[index ~/ 2];
         final taskIndex = taskEntry.key;
         final task = taskEntry.value;
         return TaskItem(
+          key: ValueKey(task.createdAt),
           title: task.title,
           metadata: task.metadata,
           completed: task.done,
@@ -239,61 +243,77 @@ class _TodoHomeState extends State<TodoHome> {
               _taskStore.setTaskDone(index: taskIndex, done: value),
             );
           },
-          trailingAction: PopupMenuButton<String>(
-            key: ValueKey('task-trailing-menu-$taskIndex'),
-            tooltip: 'Task actions',
-            icon: Icon(
-              Icons.more_vert,
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-            itemBuilder: (context) => [
-              PopupMenuItem<String>(
-                value: 'edit',
-                child: ListTile(
-                  leading: Icon(
-                    Icons.edit_outlined,
-                    color: theme.colorScheme.onSurface,
-                    size: 20,
-                  ),
-                  title: Text(
-                    'Edit',
-                    style: theme.textTheme.bodyMedium,
-                  ),
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-              PopupMenuItem<String>(
-                value: 'delete',
-                child: ListTile(
-                  leading: Icon(
-                    Icons.delete_outline,
-                    color: theme.colorScheme.error,
-                    size: 20,
-                  ),
-                  title: Text(
-                    'Delete',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.error,
-                    ),
-                  ),
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-              ..._taskTrailingHookEntries(theme: theme),
-            ],
-            onSelected: (value) {
-              if (value == 'edit') {
-                unawaited(_openEditTaskSurface(context, taskIndex, task));
-              } else if (value == 'delete') {
-                unawaited(
-                  _taskStore.deleteTask(index: taskIndex),
-                );
-              }
-            },
+          trailingAction: _buildTaskTrailingMenu(
+            context: context,
+            task: task,
+            taskIndex: taskIndex,
+            theme: theme,
+            trailingHookEntries: trailingHookEntries,
           ),
         );
+      },
+    );
+  }
+
+  Widget _buildTaskTrailingMenu({
+    required BuildContext context,
+    required ThemeData theme,
+    required TodoTask task,
+    required int taskIndex,
+    required List<PopupMenuEntry<String>> trailingHookEntries,
+  }) {
+    return PopupMenuButton<String>(
+      key: ValueKey(task.createdAt),
+      tooltip: 'Task actions',
+      icon: Icon(
+        Icons.more_vert,
+        color: theme.colorScheme.onSurfaceVariant,
+      ),
+      itemBuilder: (context) => [
+        PopupMenuItem<String>(
+          value: 'edit',
+          child: ListTile(
+            leading: Icon(
+              Icons.edit_outlined,
+              color: theme.colorScheme.onSurface,
+              size: 20,
+            ),
+            title: Text(
+              'Edit',
+              style: theme.textTheme.bodyMedium,
+            ),
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+        PopupMenuItem<String>(
+          value: 'delete',
+          child: ListTile(
+            leading: Icon(
+              Icons.delete_outline,
+              color: theme.colorScheme.error,
+              size: 20,
+            ),
+            title: Text(
+              'Delete',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.error,
+              ),
+            ),
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+        ...trailingHookEntries,
+      ],
+      onSelected: (value) {
+        if (value == 'edit') {
+          unawaited(_openEditTaskSurface(context, taskIndex, task));
+        } else if (value == 'delete') {
+          unawaited(
+            _taskStore.deleteTask(index: taskIndex),
+          );
+        }
       },
     );
   }
@@ -325,18 +345,24 @@ class _TodoHomeState extends State<TodoHome> {
   }
 
   Widget _buildTaskSkeletonList({required ThemeData theme}) {
-    return ListView.separated(
+    const skeletonRows = 3;
+    final itemCount = skeletonRows * 2 - 1;
+
+    return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: 3,
-      separatorBuilder: (context, index) {
-        return Divider(
-          color: theme.colorScheme.outline.withValues(alpha: 0.8),
-          height: 1,
-        );
-      },
+      itemCount: itemCount,
       itemBuilder: (context, index) {
-        return _buildTaskSkeletonRow(theme: theme, index: index);
+        if (index.isOdd) {
+          return Divider(
+            color: theme.colorScheme.outline.withValues(alpha: 0.8),
+            height: 1,
+          );
+        }
+        return _buildTaskSkeletonRow(
+          theme: theme,
+          index: index ~/ 2,
+        );
       },
     );
   }
@@ -544,6 +570,7 @@ class _TodoHomeState extends State<TodoHome> {
     final theme = Theme.of(context);
     final titleController = TextEditingController(text: initialTitle);
     final metadataController = TextEditingController(text: initialMetadata);
+    final formKey = GlobalKey<FormState>();
 
     await showModalBottomSheet<void>(
       context: context,
@@ -561,7 +588,9 @@ class _TodoHomeState extends State<TodoHome> {
           child: Material(
             color: theme.colorScheme.surface,
             child: SingleChildScrollView(
-              child: Column(
+              child: Form(
+                key: formKey,
+                child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -570,12 +599,22 @@ class _TodoHomeState extends State<TodoHome> {
                     style: theme.textTheme.titleLarge,
                   ),
                   const SizedBox(height: 16),
-                  TextField(
+                  TextFormField(
                     controller: titleController,
+                    maxLength: _maxTaskTitleLength,
                     decoration: const InputDecoration(
                       labelText: 'Task title',
                       hintText: 'Enter task title',
                     ),
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    validator: (value) {
+                      final title = value?.trim() ?? '';
+                      if (title.isEmpty) return 'Task title is required';
+                      if (title.length > _maxTaskTitleLength) {
+                        return 'Task title must be at most $_maxTaskTitleLength characters';
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 16),
                   TextField(
@@ -590,9 +629,10 @@ class _TodoHomeState extends State<TodoHome> {
                     height: 40,
                     child: FilledButton(
                       onPressed: () {
-                        final title = titleController.text.trim();
-                        if (title.isEmpty) return;
+                        final form = formKey.currentState;
+                        if (form == null || !form.validate()) return;
 
+                        final title = titleController.text.trim();
                         if (sheetContext.mounted) {
                           Navigator.of(sheetContext).pop();
                         }
@@ -608,6 +648,7 @@ class _TodoHomeState extends State<TodoHome> {
                     ),
                   ),
                 ],
+              ),
               ),
             ),
           ),

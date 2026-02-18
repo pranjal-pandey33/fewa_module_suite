@@ -71,6 +71,14 @@ class TodoTaskStore {
   Future<void>? _initFuture;
 
   Future<void> init() async {
+    _logEvent(
+      action: 'todo.task_store.init.start',
+      details: {
+        'fileName': _fileName,
+        'hasCache': _loaded,
+      },
+    );
+
     if (_loaded) return;
     if (_initFuture != null) {
       await _initFuture;
@@ -80,6 +88,14 @@ class TodoTaskStore {
     _initFuture = _initialize();
     try {
       await _initFuture;
+      _logEvent(
+        action: 'todo.task_store.init.complete',
+        details: {
+          'fileName': _fileName,
+          'taskCount': tasks.value.length,
+          'isLoading': isLoading.value,
+        },
+      );
     } finally {
       _initFuture = null;
     }
@@ -126,6 +142,16 @@ class TodoTaskStore {
     required String metadata,
     required bool done,
   }) async {
+    _logEvent(
+      action: 'todo.task_store.add_task',
+      details: {
+        'titleLength': title.trim().length,
+        'metadataLength': metadata.length,
+        'done': done,
+        'taskCountBefore': tasks.value.length,
+      },
+    );
+
     final updated = List<TodoTask>.from(tasks.value);
     updated.insert(
       0,
@@ -137,6 +163,13 @@ class TodoTaskStore {
       ),
     );
     tasks.value = updated;
+    _logEvent(
+      action: 'todo.task_store.tasks_mutated',
+      details: {
+        'operation': 'add',
+        'taskCountAfter': updated.length,
+      },
+    );
     await _persist();
   }
 
@@ -147,8 +180,25 @@ class TodoTaskStore {
     if (index < 0 || index >= tasks.value.length) return;
 
     final updated = List<TodoTask>.from(tasks.value);
+    final previous = updated[index];
     updated[index] = updated[index].copyWith(done: done);
+    _logEvent(
+      action: 'todo.task_store.set_task_done',
+      details: {
+        'index': index,
+        'previousDone': previous.done,
+        'done': done,
+        'taskCount': updated.length,
+      },
+    );
     tasks.value = updated;
+    _logEvent(
+      action: 'todo.task_store.tasks_mutated',
+      details: {
+        'operation': 'toggle_done',
+        'taskCount': updated.length,
+      },
+    );
     await _persist();
   }
 
@@ -167,7 +217,24 @@ class TodoTaskStore {
       metadata: metadata,
       done: done ?? current.done,
     );
+    _logEvent(
+      action: 'todo.task_store.update_task',
+      details: {
+        'index': index,
+        'titleLength': title.trim().length,
+        'metadataLength': metadata.length,
+        'done': done ?? current.done,
+        'taskCount': updated.length,
+      },
+    );
     tasks.value = updated;
+    _logEvent(
+      action: 'todo.task_store.tasks_mutated',
+      details: {
+        'operation': 'update',
+        'taskCount': updated.length,
+      },
+    );
     await _persist();
   }
 
@@ -176,11 +243,33 @@ class TodoTaskStore {
 
     final updated = List<TodoTask>.from(tasks.value);
     updated.removeAt(index);
+    _logEvent(
+      action: 'todo.task_store.delete_task',
+      details: {
+        'index': index,
+        'taskCountBefore': tasks.value.length,
+        'taskCountAfter': updated.length,
+      },
+    );
     tasks.value = updated;
+    _logEvent(
+      action: 'todo.task_store.tasks_mutated',
+      details: {
+        'operation': 'delete',
+        'taskCount': updated.length,
+      },
+    );
     await _persist();
   }
 
   Future<void> _persist() async {
+    _logEvent(
+      action: 'todo.task_store.persist',
+      details: {
+        'fileName': _fileName,
+        'taskCount': tasks.value.length,
+      },
+    );
     await _ensureFile();
 
     final data = {
@@ -199,5 +288,20 @@ class TodoTaskStore {
   void dispose() {
     tasks.dispose();
     isLoading.dispose();
+  }
+
+  void _logEvent({
+    required String action,
+    required Map<String, Object?> details,
+  }) {
+    if (!kDebugMode) return;
+    final payload = <String, Object?>{
+      'event': 'todo_task_store',
+      'action': action,
+      'ts': DateTime.now().toIso8601String(),
+      'details': details,
+    };
+
+    debugPrint(jsonEncode(payload));
   }
 }

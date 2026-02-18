@@ -5,7 +5,7 @@ class CalculatorModule {
   static const route = '/calculator';
 
   static void register(RouteRegistry routes, EventBus bus, HookRegistry hooks) {
-    routes.register(route, (_) => const CalculatorScreen());
+    routes.register(route, (_) => CalculatorScreen(bus));
 
     // Prove cross-module comms later:
     hooks.register('home.actions', () {
@@ -15,21 +15,34 @@ class CalculatorModule {
 }
 
 class CalculatorScreen extends StatelessWidget {
-  const CalculatorScreen({super.key});
+  final EventBus bus;
+
+  const CalculatorScreen(this.bus, {super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Calculator')),
       body: Center(
-        child: ElevatedButton(
-          onPressed: () {
-            // We'll switch this to a typed event soon.
-            debugPrint('Calculator: clicked');
-          },
-          child: const Text('Click me'),
-        ),
+  child: Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      ElevatedButton(
+        onPressed: () {
+          final result = 2 + 2;
+          bus.publish(CalculationCompleted(result));
+        },
+        child: const Text('Calculate (publish event)'),
       ),
+      const SizedBox(height: 12),
+      ElevatedButton(
+        onPressed: () => Navigator.pushNamed(context, '/todo'),
+        child: const Text('Go to Todo'),
+      ),
+    ],
+  ),
+),
+
     );
   }
 }

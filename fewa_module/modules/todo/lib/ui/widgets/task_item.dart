@@ -90,7 +90,7 @@ class _TaskItemState extends State<TaskItem> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    title,
+                    widget.title,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: textColor,
                       decoration: _isCompleted
@@ -101,7 +101,7 @@ class _TaskItemState extends State<TaskItem> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    metadata,
+                    widget.metadata,
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),

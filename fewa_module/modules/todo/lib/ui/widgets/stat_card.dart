@@ -32,7 +32,7 @@ class StatCard extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: theme.textTheme.labelSmall?.copyWith(
+                  style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
@@ -41,6 +41,7 @@ class StatCard extends StatelessWidget {
                   value,
                   style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w600,
+                    fontSize: 24,
                     color: theme.colorScheme.onSurface,
                   ),
                 ),

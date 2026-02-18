@@ -15,8 +15,6 @@ class TodoScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final width = MediaQuery.of(context).size.width;
-    final horizontalPadding = width >= 768 ? 32.0 : 16.0;
 
     return Scaffold(
       appBar: AppBar(
@@ -33,7 +31,7 @@ class TodoScaffold extends StatelessWidget {
           constraints: const BoxConstraints(maxWidth: 720),
           child: Padding(
             padding: EdgeInsets.symmetric(
-              horizontal: horizontalPadding,
+              horizontal: 16,
               vertical: 16,
             ),
             child: body,

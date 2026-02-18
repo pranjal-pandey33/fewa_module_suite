@@ -30,19 +30,22 @@ class TodoHome extends StatelessWidget {
     return ValueListenableBuilder<int>(
       valueListenable: TodoModule.projections.calcCount,
       builder: (context, calcCount, _) {
+        final theme = Theme.of(context);
         return TodoScaffold(
           appBarActions: const _TodoAppBarHookSlot(),
           onAddTask: () => _openAddTaskSurface(context),
           body: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              Text('Dashboard', style: theme.textTheme.titleMedium),
+              const SizedBox(height: 16),
               StatCard(
                 label: 'Calculation Events Today',
                 value: calcCount.toString(),
               ),
               const SizedBox(height: 8),
               const _DashboardHookSlot(),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               Text(
                 'Task List',
                 style: Theme.of(context).textTheme.titleMedium,
@@ -65,7 +68,7 @@ class TodoHome extends StatelessWidget {
                     metadata: task.metadata,
                     completed: task.completed,
                     onChanged: (_) {},
-+                    trailingAction: const SizedBox.shrink(),
+                    trailingAction: const SizedBox.shrink(),
                   );
                 },
               ),
@@ -77,37 +80,55 @@ class TodoHome extends StatelessWidget {
   }
 
   Future<void> _openAddTaskSurface(BuildContext context) async {
-    final screenWidth = MediaQuery.of(context).size.width;
-
-    if (screenWidth >= 768) {
-      await showDialog<void>(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: const Text('Add Task'),
-            content: const Text(
-              'Task creation surface will be connected in the next phase.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Close'),
-              ),
-            ],
-          );
-        },
-      );
-      return;
-    }
+    final theme = Theme.of(context);
 
     await showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       builder: (context) {
+        final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
         return Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(
-            'Task creation surface will be connected in the next phase.',
-            style: Theme.of(context).textTheme.bodyLarge,
+          padding: EdgeInsets.fromLTRB(
+            16,
+            24,
+            16,
+            24 + bottomInset,
+          ),
+          child: Material(
+            color: theme.colorScheme.surface,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Add Task',
+                  style: theme.textTheme.titleLarge,
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  decoration: const InputDecoration(
+                    labelText: 'Task title',
+                    hintText: 'Enter task title',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  decoration: const InputDecoration(
+                    labelText: 'Metadata (optional)',
+                    hintText: 'Add optional notes',
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  height: 40,
+                  child: FilledButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Add Task'),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },

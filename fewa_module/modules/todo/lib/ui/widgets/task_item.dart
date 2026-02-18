@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class TaskItem extends StatelessWidget {
+class TaskItem extends StatefulWidget {
   const TaskItem({
     super.key,
     required this.title,
@@ -17,22 +17,69 @@ class TaskItem extends StatelessWidget {
   final Widget? trailingAction;
 
   @override
+  State<TaskItem> createState() => _TaskItemState();
+}
+
+class _TaskItemState extends State<TaskItem> {
+  bool _isCompleted = false;
+  double _scale = 1.0;
+
+  @override
+  void initState() {
+    super.initState();
+    _isCompleted = widget.completed;
+  }
+
+  @override
+  void didUpdateWidget(covariant TaskItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.completed != widget.completed) {
+      setState(() {
+        _isCompleted = widget.completed;
+      });
+    }
+  }
+
+  Future<void> _handleChanged(bool? value) async {
+    if (value == null) return;
+
+    setState(() {
+      _isCompleted = value;
+      _scale = 0.97;
+    });
+
+    widget.onChanged?.call(value);
+
+    await Future.delayed(const Duration(milliseconds: 150));
+    if (!mounted) return;
+
+    setState(() {
+      _scale = 1.0;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final textColor = completed
+    final textColor = _isCompleted
         ? theme.colorScheme.onSurface.withOpacity(0.6)
         : theme.colorScheme.onSurface;
 
-      return Container(
+    return Container(
       constraints: const BoxConstraints(minHeight: 56),
       alignment: Alignment.centerLeft,
       child: Row(
         children: [
-          Checkbox(
-            value: completed,
-            onChanged: onChanged,
-            activeColor: theme.colorScheme.primary,
-            checkColor: theme.colorScheme.onPrimary,
+          AnimatedScale(
+            scale: _scale,
+            duration: const Duration(milliseconds: 150),
+            curve: Curves.easeOut,
+            child: Checkbox(
+              value: _isCompleted,
+              onChanged: _handleChanged,
+              activeColor: theme.colorScheme.primary,
+              checkColor: theme.colorScheme.onPrimary,
+            ),
           ),
           const SizedBox(width: 8),
           Expanded(
@@ -44,9 +91,9 @@ class TaskItem extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: theme.textTheme.bodyLarge?.copyWith(
+                    style: theme.textTheme.bodyMedium?.copyWith(
                       color: textColor,
-                      decoration: completed
+                      decoration: _isCompleted
                           ? TextDecoration.lineThrough
                           : TextDecoration.none,
                       decorationThickness: 2,
@@ -64,12 +111,12 @@ class TaskItem extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 8),
-          SizedBox(
+          Container(
             width: 24,
             height: 24,
             child: KeyedSubtree(
               key: const ValueKey('todo.task.item.trailing'),
-              child: trailingAction ?? const SizedBox.shrink(),
+              child: widget.trailingAction ?? const SizedBox.shrink(),
             ),
           ),
         ],

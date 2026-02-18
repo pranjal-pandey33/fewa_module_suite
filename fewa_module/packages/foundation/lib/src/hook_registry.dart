@@ -1,11 +1,18 @@
 typedef HookHandler = void Function();
+typedef HookContribution = Object? Function();
 
 class HookRegistry {
   final Map<String, List<HookHandler>> _hooks = {};
+  final Map<String, List<HookContribution>> _contributions = {};
 
   void register(String hookName, HookHandler handler) {
     final list = _hooks.putIfAbsent(hookName, () => []);
     list.add(handler);
+  }
+
+  void registerContribution(String hookName, HookContribution contribution) {
+    final list = _contributions.putIfAbsent(hookName, () => []);
+    list.add(contribution);
   }
 
   void trigger(String hookName) {
@@ -19,5 +26,14 @@ class HookRegistry {
 
   int count(String hookName) => _hooks[hookName]?.length ?? 0;
 
-  void clear() => _hooks.clear();
+  int contributionCount(String hookName) =>
+      _contributions[hookName]?.length ?? 0;
+
+  Iterable<HookContribution> contributions(String hookName) =>
+      _contributions[hookName] ?? const [];
+
+  void clear() {
+    _hooks.clear();
+    _contributions.clear();
+  }
 }

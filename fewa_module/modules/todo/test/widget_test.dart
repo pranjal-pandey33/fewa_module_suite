@@ -17,11 +17,14 @@ void main() {
         home: TodoHome(calculationEvents: ValueNotifier<int>(3)),
       ),
     );
+    await tester.pumpAndSettle();
 
     expect(find.text('Todo'), findsOneWidget);
     expect(find.text('Calculation Events Today'), findsOneWidget);
     expect(find.text('3'), findsOneWidget);
-
-    expect(find.text('Finalize invoicing sequence'), findsOneWidget);
+    expect(find.text('Task List'), findsOneWidget);
+    expect(find.text('All'), findsOneWidget);
+    expect(find.text('Active'), findsOneWidget);
+    expect(find.text('Completed'), findsOneWidget);
   });
 }

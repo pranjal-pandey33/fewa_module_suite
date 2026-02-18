@@ -117,3 +117,34 @@ Refactor the Todo module to enforce clean folder boundaries from `todo_design.md
     - skeleton placeholders,
     - empty state,
     - or the interactive task list with edit/delete actions.
+
+## New Implementation Update (HookRegistry-driven Slots + Overflow Rendering)
+
+1. Added hook-contribution API in foundation
+- `packages/foundation/lib/src/hook_registry.dart`
+  - Added `HookContribution = Object? Function()`.
+  - Added `registerContribution(String hookName, HookContribution contributor)` for slot-driven UI providers.
+  - Added `contributions(String hookName)` and `contributionCount(String hookName)` accessors.
+  - `clear()` now resets both handler and contribution collections.
+
+2. Wired Todo UI to hook slots
+- `modules/todo/lib/src/module/todo_module.dart`
+  - Passed `HookRegistry` into `TodoHome` so slots can read registered hook contributions.
+- `modules/todo/lib/ui/screens/todo_home.dart`
+  - Added `_buildAppBarHookActions` for `todo.appbar.actions` with max 3 inline actions and overflow menu.
+  - Added `_buildDashboardHookCards` for `todo.dashboard.cards` rendered as a safe wrap layout.
+  - Added `_taskTrailingHookEntries` for `todo.task.item.trailing`, appended into the row menu.
+  - Added safe contribution collection via `_hookWidgets` that catches bad contributions and renders only `Widget` values.
+
+## New Implementation Update (Task List Filters)
+
+1. Added local task filtering UI
+- `modules/todo/lib/ui/screens/todo_home.dart`
+  - Added `_TaskFilter` enum with values `all`, `active`, and `completed`.
+  - Added filter chips below the "Task List" heading for `All`, `Active`, and `Completed`.
+
+2. Applied filter to rendered list only
+- `modules/todo/lib/ui/screens/todo_home.dart`
+  - Added filtered task mapping in `_buildTaskSection` and `_filteredTaskEntries(...)` so filtering only affects rendering.
+  - Kept store update paths (`setTaskDone`, `updateTask`, `deleteTask`) intact.
+  - Resolved actions in filtered mode using original task index from `MapEntry.key` to avoid index mismatch.

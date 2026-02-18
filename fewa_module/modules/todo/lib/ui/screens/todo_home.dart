@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:foundation/foundation.dart';
 import 'package:todo/ui/hooks/hook_zones.dart';
 import 'package:todo/ui/layout/todo_scaffold.dart';
 import 'package:todo/ui/widgets/stat_card.dart';
@@ -13,17 +14,23 @@ class TodoHome extends StatefulWidget {
     super.key,
     required this.calculationEvents,
     TodoTaskStore? taskStore,
-  }) : _taskStore = taskStore;
+    HookRegistry? hooks,
+  }) : _taskStore = taskStore,
+       _hooks = hooks;
 
   final ValueListenable<int> calculationEvents;
   final TodoTaskStore? _taskStore;
+  final HookRegistry? _hooks;
 
   @override
   State<TodoHome> createState() => _TodoHomeState();
 }
 
+enum _TaskFilter { all, active, completed }
+
 class _TodoHomeState extends State<TodoHome> {
   late final TodoTaskStore _taskStore = widget._taskStore ?? TodoTaskStore();
+  _TaskFilter _selectedFilter = _TaskFilter.all;
 
   @override
   void initState() {
@@ -44,7 +51,7 @@ class _TodoHomeState extends State<TodoHome> {
               valueListenable: _taskStore.tasks,
               builder: (context, tasks, _) {
             return TodoScaffold(
-              appBarActions: const _TodoAppBarHookSlot(),
+              appBarActions: _buildAppBarHookActions(),
               onAddTask: () => _openAddTaskSurface(context),
               body: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -56,12 +63,14 @@ class _TodoHomeState extends State<TodoHome> {
                     value: calcCount.toString(),
                   ),
                   const SizedBox(height: 8),
-                  const _DashboardHookSlot(),
+                  _buildDashboardHookCards(),
                   const SizedBox(height: 16),
                   Text(
                     'Task List',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
+                  const SizedBox(height: 8),
+                  _buildTaskFilterBar(theme: theme),
                   const SizedBox(height: 8),
                   _buildTaskSection(
                     context: context,
@@ -80,6 +89,105 @@ class _TodoHomeState extends State<TodoHome> {
     );
   }
 
+  Widget _buildAppBarHookActions() {
+    final contributions = _hookWidgets(TodoHookZones.appBarActions);
+
+    if (contributions.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final direct = contributions.take(3).toList();
+    final overflow = contributions.skip(3).toList();
+
+    return KeyedSubtree(
+      key: const ValueKey(TodoHookZones.appBarActions),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ...direct.map(
+            (child) => _normalizeAppBarAction(child: child),
+          ),
+          if (overflow.isNotEmpty)
+            _buildHookOverflowButton(
+              triggerIcon: Icons.more_horiz,
+              tooltip: 'More actions',
+              overflowItems: overflow,
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDashboardHookCards() {
+    final contributions = _hookWidgets(TodoHookZones.dashboardCards);
+    if (contributions.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return KeyedSubtree(
+      key: const ValueKey(TodoHookZones.dashboardCards),
+      child: Wrap(
+        spacing: 12,
+        runSpacing: 12,
+        children: contributions,
+      ),
+    );
+  }
+
+  List<Widget> _hookWidgets(String hookName) {
+    final registered = widget._hooks?.contributions(hookName) ?? const [];
+    final widgets = <Widget>[];
+
+    for (final contribution in registered) {
+      try {
+        final value = contribution();
+        if (value is Widget) {
+          widgets.add(value);
+        }
+      } catch (_) {
+        // Ignore malformed hooks to keep list rendering stable.
+      }
+    }
+
+    return widgets;
+  }
+
+  Widget _buildHookOverflowButton({
+    required IconData triggerIcon,
+    required String tooltip,
+    required List<Widget> overflowItems,
+  }) {
+    return PopupMenuButton<int>(
+      tooltip: tooltip,
+      icon: Icon(triggerIcon),
+      itemBuilder: (context) => overflowItems
+          .asMap()
+          .entries
+          .map(
+            (entry) => PopupMenuItem<int>(
+              value: entry.key,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: SizedBox(
+                  width: 240,
+                  child: overflowItems[entry.key],
+                ),
+              ),
+            ),
+          )
+          .toList(),
+      onSelected: (_) {},
+    );
+  }
+
+  Widget _normalizeAppBarAction({required Widget child}) {
+    return SizedBox(
+      width: 40,
+      height: 40,
+      child: Center(child: child),
+    );
+  }
+
   Widget _buildTaskSection({
     required BuildContext context,
     required ThemeData theme,
@@ -90,17 +198,22 @@ class _TodoHomeState extends State<TodoHome> {
       return _buildTaskSkeletonList(theme: theme);
     }
 
-    if (tasks.isEmpty) {
+    final filteredTasks = _filteredTaskEntries(tasks);
+    if (filteredTasks.isEmpty) {
       return _buildEmptyTaskState(theme: theme);
     }
 
-    return _buildTaskList(theme: theme, tasks: tasks, context: context);
+    return _buildTaskList(
+      theme: theme,
+      tasks: filteredTasks,
+      context: context,
+    );
   }
 
   Widget _buildTaskList({
     required BuildContext context,
     required ThemeData theme,
-    required List<TodoTask> tasks,
+    required List<MapEntry<int, TodoTask>> tasks,
   }) {
     return ListView.separated(
       shrinkWrap: true,
@@ -113,7 +226,9 @@ class _TodoHomeState extends State<TodoHome> {
         );
       },
       itemBuilder: (context, index) {
-        final task = tasks[index];
+        final taskEntry = tasks[index];
+        final taskIndex = taskEntry.key;
+        final task = taskEntry.value;
         return TaskItem(
           title: task.title,
           metadata: task.metadata,
@@ -121,10 +236,11 @@ class _TodoHomeState extends State<TodoHome> {
           onChanged: (value) {
             if (value == null) return;
             unawaited(
-              _taskStore.setTaskDone(index: index, done: value),
+              _taskStore.setTaskDone(index: taskIndex, done: value),
             );
           },
           trailingAction: PopupMenuButton<String>(
+            key: ValueKey('task-trailing-menu-$taskIndex'),
             tooltip: 'Task actions',
             icon: Icon(
               Icons.more_vert,
@@ -165,13 +281,14 @@ class _TodoHomeState extends State<TodoHome> {
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
+              ..._taskTrailingHookEntries(theme: theme),
             ],
             onSelected: (value) {
               if (value == 'edit') {
-                unawaited(_openEditTaskSurface(context, index, task));
+                unawaited(_openEditTaskSurface(context, taskIndex, task));
               } else if (value == 'delete') {
                 unawaited(
-                  _taskStore.deleteTask(index: index),
+                  _taskStore.deleteTask(index: taskIndex),
                 );
               }
             },
@@ -179,6 +296,32 @@ class _TodoHomeState extends State<TodoHome> {
         );
       },
     );
+  }
+
+  List<PopupMenuEntry<String>> _taskTrailingHookEntries({
+    required ThemeData theme,
+  }) {
+    final contributions = _hookWidgets(TodoHookZones.taskItemTrailing);
+    if (contributions.isEmpty) {
+      return const [];
+    }
+
+    return contributions
+        .asMap()
+        .entries
+        .map(
+          (entry) => PopupMenuItem<String>(
+            value: 'hook-${entry.key}',
+            child: DefaultTextStyle(
+              style: theme.textTheme.bodyMedium!,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: entry.value,
+              ),
+            ),
+          ),
+        )
+        .toList();
   }
 
   Widget _buildTaskSkeletonList({required ThemeData theme}) {
@@ -271,6 +414,12 @@ class _TodoHomeState extends State<TodoHome> {
   }
 
   Widget _buildEmptyTaskState({required ThemeData theme}) {
+    final label = switch (_selectedFilter) {
+      _TaskFilter.all => 'No tasks yet',
+      _TaskFilter.active => 'No active tasks yet',
+      _TaskFilter.completed => 'No completed tasks yet',
+    };
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 36),
       child: Column(
@@ -282,7 +431,7 @@ class _TodoHomeState extends State<TodoHome> {
           ),
           const SizedBox(height: 12),
           Text(
-            'No tasks yet',
+            label,
             style: theme.textTheme.titleMedium,
           ),
           const SizedBox(height: 8),
@@ -296,6 +445,54 @@ class _TodoHomeState extends State<TodoHome> {
         ],
       ),
     );
+  }
+
+  Widget _buildTaskFilterBar({required ThemeData theme}) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: _TaskFilter.values.map((filter) {
+        final isSelected = _selectedFilter == filter;
+        return ChoiceChip(
+          label: Text(_filterLabel(filter)),
+          selected: isSelected,
+          onSelected: (selected) {
+            if (!selected) return;
+            setState(() {
+              _selectedFilter = filter;
+            });
+          },
+          labelStyle: theme.textTheme.bodySmall?.copyWith(
+            color: isSelected
+                ? theme.colorScheme.onSecondaryContainer
+                : theme.colorScheme.onSurfaceVariant,
+            fontWeight: FontWeight.w600,
+          ),
+          selectedColor: theme.colorScheme.secondaryContainer,
+          shape: const StadiumBorder(),
+        );
+      }).toList(),
+    );
+  }
+
+  String _filterLabel(_TaskFilter filter) {
+    return switch (filter) {
+      _TaskFilter.all => 'All',
+      _TaskFilter.active => 'Active',
+      _TaskFilter.completed => 'Completed',
+    };
+  }
+
+  List<MapEntry<int, TodoTask>> _filteredTaskEntries(List<TodoTask> tasks) {
+    return switch (_selectedFilter) {
+      _TaskFilter.all => tasks.asMap().entries.toList(),
+      _TaskFilter.active => tasks.asMap().entries
+          .where((entry) => !entry.value.done)
+          .toList(),
+      _TaskFilter.completed => tasks.asMap().entries
+          .where((entry) => entry.value.done)
+          .toList(),
+    };
   }
 
   Future<void> _openAddTaskSurface(BuildContext context) async {
@@ -416,27 +613,6 @@ class _TodoHomeState extends State<TodoHome> {
           ),
         );
       },
-    );
-  }
-}
-
-class _TodoAppBarHookSlot extends StatelessWidget {
-  const _TodoAppBarHookSlot();
-
-  @override
-  Widget build(BuildContext context) {
-    return const SizedBox.shrink();
-  }
-}
-
-class _DashboardHookSlot extends StatelessWidget {
-  const _DashboardHookSlot();
-
-  @override
-  Widget build(BuildContext context) {
-    return const KeyedSubtree(
-      key: ValueKey(TodoHookZones.dashboardCards),
-      child: SizedBox.shrink(),
     );
   }
 }

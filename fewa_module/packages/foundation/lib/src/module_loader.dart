@@ -1,10 +1,7 @@
-import '../foundation.dart';
-
-typedef ModuleRegister = void Function(
-  RouteRegistry routes,
-  EventBus bus,
-  HookRegistry hooks,
-);
+import 'module_entry.dart';
+import 'event_bus.dart';
+import 'hook_registry.dart';
+import 'route_registry.dart';
 
 class ModuleLoader {
   final EventBus eventBus;

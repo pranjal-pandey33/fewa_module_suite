@@ -2,8 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:foundation/foundation.dart';
-import 'package:todo/todo_module.dart';
-import 'package:calculator/calculator_module.dart';
+import 'generated/module_registry.g.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -48,18 +47,6 @@ Future<void> main() async {
   final resolver = DependencyResolver();
   final loadOrder = resolver.resolve(requested: requested, all: manifests);
 
-  // 3) Map module name -> register function
-  ModuleRegister registerFor(String name) {
-    switch (name) {
-      case 'todo':
-        return TodoModule.register;
-      case 'calculator':
-        return CalculatorModule.register;
-      default:
-        throw StateError('No register() mapping for module: $name');
-    }
-  }
-
   // 4) Boot kernel + load modules
   final eventBus = EventBus();
   final hooks = HookRegistry();
@@ -67,7 +54,15 @@ Future<void> main() async {
 
   final loader = ModuleLoader(eventBus: eventBus, hooks: hooks, routes: routes);
 
-  loader.load(loadOrder.map(registerFor).toList());
+  final moduleRegisters = loadOrder.map((name) {
+    final entry = moduleRegistry[name];
+    if (entry == null) {
+      throw StateError('No register() mapping for module: $name');
+    }
+    return entry.register;
+  }).toList();
+
+  loader.load(moduleRegisters);
 
   final requiredRoutes = <String>[];
   for (final moduleName in loadOrder) {

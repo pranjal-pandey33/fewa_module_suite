@@ -1,0 +1,14 @@
+{
+  "modules": [
+    {
+      "name": "todo",
+      "package": "todo",
+      "entryConst": "todoEntry"
+    },
+    {
+      "name": "calculator",
+      "package": "calculator",
+      "entryConst": "calculatorEntry"
+    }
+  ]
+}

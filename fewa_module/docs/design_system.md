@@ -208,8 +208,19 @@ Modules must:
 - Not create new ThemeData
 - Respect dark/light mode
 - Not override typography scale
+- Use the global theme builder from Foundation:
+  - `AppTheme.light()` for light theme
+  - `AppTheme.dark()` for dark theme
+- Reuse tokens from theme tokens (`Theme.of(context).colorScheme` and `Theme.of(context).textTheme`)
 
 Theme must be defined once in foundation or launcher.
+
+Hardening pattern (manual):
+
+- In module builds where visual regressions are likely, call:
+  `assertNoHardcodedColors(context: context, location: 'ModuleName/Widget', colors: [...])`
+  in development-only builds to catch non-token colors during review.
+- Prefer replacing direct color literals and text styles with theme lookups instead of introducing custom constants.
 
 ---
 

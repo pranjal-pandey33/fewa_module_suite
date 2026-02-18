@@ -21,27 +21,34 @@ class CalculatorScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Calculator')),
+      appBar: AppBar(
+        title: Text(
+          'Calculator',
+          style: theme.textTheme.headlineMedium,
+        ),
+      ),
       body: Center(
-  child: Column(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      ElevatedButton(
-        onPressed: () {
-          final result = 2 + 2;
-          bus.publish(CalculationCompleted(result));
-        },
-        child: const Text('Calculate (publish event)'),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ElevatedButton(
+              onPressed: () {
+                final result = 2 + 2;
+                bus.publish(CalculationCompleted(result));
+              },
+              child: const Text('Calculate (publish event)'),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => Navigator.pushNamed(context, '/todo'),
+              child: const Text('Go to Todo'),
+            ),
+          ],
+        ),
       ),
-      const SizedBox(height: 12),
-      ElevatedButton(
-        onPressed: () => Navigator.pushNamed(context, '/todo'),
-        child: const Text('Go to Todo'),
-      ),
-    ],
-  ),
-),
 
     );
   }

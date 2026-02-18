@@ -52,12 +52,14 @@ ThemeData buildTheme({Brightness brightness = Brightness.light}) {
     ),
     cardTheme: CardThemeData(
       color: colorScheme.surface,
-      elevation: 0,
+      elevation: 1,
+      shadowColor: Colors.black12,
+      surfaceTintColor: colorScheme.surfaceTint,
       margin: EdgeInsets.zero,
-      shape: const RoundedRectangleBorder(
+      shape: RoundedRectangleBorder(
         borderRadius: AppRadius.cardBorderRadius,
+        side: BorderSide(color: colorScheme.outline),
       ),
-      side: BorderSide(color: colorScheme.outline),
     ),
     dividerTheme: DividerThemeData(
       color: colorScheme.outline,
@@ -107,6 +109,10 @@ ThemeData buildTheme({Brightness brightness = Brightness.light}) {
         minimumSize: const Size.fromHeight(40),
         foregroundColor: colorScheme.onSurface,
         side: BorderSide(color: colorScheme.outline),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.x2,
+          vertical: 0,
+        ),
         shape: RoundedRectangleBorder(
           borderRadius: AppRadius.buttonBorderRadius,
         ),
@@ -127,6 +133,10 @@ ThemeData buildTheme({Brightness brightness = Brightness.light}) {
     ),
     dividerColor: colorScheme.outline,
     inputDecorationTheme: InputDecorationTheme(
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.x2,
+        vertical: AppSpacing.x1,
+      ),
       border: OutlineInputBorder(
         borderRadius: AppRadius.buttonBorderRadius,
         borderSide: BorderSide(color: colorScheme.outline),
@@ -143,6 +153,14 @@ ThemeData buildTheme({Brightness brightness = Brightness.light}) {
       fillColor: colorScheme.surface,
     ),
   );
+}
+
+class AppTheme {
+  AppTheme._();
+
+  static ThemeData light() => buildTheme(brightness: Brightness.light);
+
+  static ThemeData dark() => buildTheme(brightness: Brightness.dark);
 }
 
 final ColorScheme _lightColorScheme = ColorScheme(

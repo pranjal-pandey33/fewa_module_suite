@@ -10,6 +10,7 @@ export 'src/dependency_resolver.dart';
 export 'src/theme/app_colors.dart';
 export 'src/theme/app_typography.dart';
 export 'src/theme/app_theme.dart';
+export 'src/theme/theme_checks.dart';
 
 
 String foundationHello() => "foundation: wired";

@@ -20,7 +20,7 @@ class TodoScaffold extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Todo', style: theme.textTheme.titleLarge),
+        title: Text('Todo', style: theme.textTheme.headlineMedium),
         actions: [
           KeyedSubtree(
             key: const ValueKey(TodoHookZones.appBarActions),

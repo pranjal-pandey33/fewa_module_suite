@@ -157,7 +157,7 @@ class _TodoHomeState extends State<TodoHome> {
             (entry) => PopupMenuItem<int>(
               value: entry.key,
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
+                padding: const EdgeInsets.symmetric(vertical: 8),
                 child: SizedBox(
                   width: 240,
                   child: overflowItems[entry.key],
@@ -326,7 +326,7 @@ class _TodoHomeState extends State<TodoHome> {
       return const [];
     }
 
-    return contributions
+        return contributions
         .asMap()
         .entries
         .map(
@@ -335,7 +335,7 @@ class _TodoHomeState extends State<TodoHome> {
             child: DefaultTextStyle(
               style: theme.textTheme.bodyMedium!,
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
+                padding: const EdgeInsets.symmetric(vertical: 8),
                 child: entry.value,
               ),
             ),
@@ -447,7 +447,7 @@ class _TodoHomeState extends State<TodoHome> {
     };
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 36),
+      padding: const EdgeInsets.symmetric(vertical: 32),
       child: Column(
         children: [
           Icon(
@@ -455,7 +455,7 @@ class _TodoHomeState extends State<TodoHome> {
             color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
             size: 56,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Text(
             label,
             style: theme.textTheme.titleMedium,
@@ -596,7 +596,7 @@ class _TodoHomeState extends State<TodoHome> {
                 children: [
                   Text(
                     sheetTitle,
-                    style: theme.textTheme.titleLarge,
+                    style: theme.textTheme.headlineMedium,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
@@ -627,7 +627,7 @@ class _TodoHomeState extends State<TodoHome> {
                   const SizedBox(height: 24),
                   SizedBox(
                     height: 40,
-                    child: FilledButton(
+                    child: ElevatedButton(
                       onPressed: () {
                         final form = formKey.currentState;
                         if (form == null || !form.validate()) return;

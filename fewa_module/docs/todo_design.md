@@ -283,6 +283,7 @@ Violations:
 - Breaking hook layout
 - Visual inconsistency with design_system.md
 
+### Everytime you start implementing the code , always read all the md files of /docs/
 Must be rejected in review.
 
 ---

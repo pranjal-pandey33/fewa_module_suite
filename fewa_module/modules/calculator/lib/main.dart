@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:foundation/foundation.dart';
 
 import 'calculator_module.dart';
 
@@ -11,8 +12,8 @@ class CalculatorModuleApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: CalculatorScreen(),
+    return MaterialApp(
+      home: CalculatorScreen(EventBus()),
     );
   }
 }

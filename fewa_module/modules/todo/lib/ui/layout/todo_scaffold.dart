@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'package:todo/ui/hooks/hook_zones.dart';
+
 class TodoScaffold extends StatelessWidget {
   const TodoScaffold({
     super.key,
@@ -21,7 +23,7 @@ class TodoScaffold extends StatelessWidget {
         title: Text('Todo', style: theme.textTheme.titleLarge),
         actions: [
           KeyedSubtree(
-            key: const ValueKey('todo.appbar.actions'),
+            key: const ValueKey(TodoHookZones.appBarActions),
             child: appBarActions ?? const SizedBox.shrink(),
           ),
         ],

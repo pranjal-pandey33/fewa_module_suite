@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:todo/ui/hooks/hook_zones.dart';
 
 class TaskItem extends StatefulWidget {
   const TaskItem({
@@ -62,7 +63,7 @@ class _TaskItemState extends State<TaskItem> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textColor = _isCompleted
-        ? theme.colorScheme.onSurface.withOpacity(0.6)
+        ? theme.colorScheme.onSurface.withValues(alpha: 0.6)
         : theme.colorScheme.onSurface;
 
     return Container(
@@ -111,11 +112,11 @@ class _TaskItemState extends State<TaskItem> {
             ),
           ),
           const SizedBox(width: 8),
-          Container(
+          SizedBox(
             width: 24,
             height: 24,
             child: KeyedSubtree(
-              key: const ValueKey('todo.task.item.trailing'),
+              key: const ValueKey(TodoHookZones.taskItemTrailing),
               child: widget.trailingAction ?? const SizedBox.shrink(),
             ),
           ),

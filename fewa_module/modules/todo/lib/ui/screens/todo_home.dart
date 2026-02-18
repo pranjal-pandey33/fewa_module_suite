@@ -1,34 +1,67 @@
 import 'package:flutter/material.dart';
-import 'package:todo/todo_module.dart';
-import '../layout/todo_scaffold.dart';
-import '../widgets/stat_card.dart';
-import '../widgets/task_item.dart';
+import 'package:flutter/foundation.dart';
+import 'package:todo/ui/hooks/hook_zones.dart';
+import 'package:todo/ui/layout/todo_scaffold.dart';
+import 'package:todo/ui/widgets/stat_card.dart';
+import 'package:todo/ui/widgets/task_item.dart';
 
-class TodoHome extends StatelessWidget {
-  const TodoHome({super.key});
+class UiTask {
+  UiTask({
+    required this.title,
+    required this.metadata,
+    required this.done,
+  });
 
-  static const List<_TodoTask> _tasks = [
-    _TodoTask(
+  final String title;
+  final String metadata;
+  bool done;
+}
+
+class TodoHome extends StatefulWidget {
+  const TodoHome({
+    super.key,
+    required this.calculationEvents,
+  });
+
+  final ValueListenable<int> calculationEvents;
+
+  @override
+  State<TodoHome> createState() => _TodoHomeState();
+}
+
+class _TodoHomeState extends State<TodoHome> {
+  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _metadataController = TextEditingController();
+
+  final List<UiTask> _tasks = [
+    UiTask(
       title: 'Finalize invoicing sequence',
       metadata: 'Due in 2 days • High priority',
-      completed: true,
+      done: true,
     ),
-    _TodoTask(
+    UiTask(
       title: 'Link calculation result #182 to task',
       metadata: 'Due in 4 days • Medium priority',
-      completed: false,
+      done: false,
     ),
-    _TodoTask(
+    UiTask(
       title: 'Archive closed projects',
       metadata: 'No due date • Low priority',
-      completed: false,
+      done: false,
     ),
   ];
 
   @override
+  void dispose() {
+    _titleController.dispose();
+    _metadataController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<int>(
-      valueListenable: TodoModule.projections.calcCount,
+      valueListenable: widget.calculationEvents,
       builder: (context, calcCount, _) {
         final theme = Theme.of(context);
         return TodoScaffold(
@@ -57,17 +90,25 @@ class TodoHome extends StatelessWidget {
                 itemCount: _tasks.length,
                 separatorBuilder: (context, index) {
                   return Divider(
-                    color: Theme.of(context).colorScheme.outline.withOpacity(0.8),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .outline
+                        .withValues(alpha: 0.8),
                     height: 1,
                   );
-                  },
+                },
                 itemBuilder: (context, index) {
                   final task = _tasks[index];
                   return TaskItem(
                     title: task.title,
                     metadata: task.metadata,
-                    completed: task.completed,
-                    onChanged: (_) {},
+                    completed: task.done,
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setState(() {
+                        task.done = value;
+                      });
+                    },
                     trailingAction: const SizedBox.shrink(),
                   );
                 },
@@ -85,8 +126,8 @@ class TodoHome extends StatelessWidget {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      builder: (context) {
-        final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+      builder: (sheetContext) {
+        final bottomInset = MediaQuery.of(sheetContext).viewInsets.bottom;
 
         return Padding(
           padding: EdgeInsets.fromLTRB(
@@ -107,6 +148,7 @@ class TodoHome extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 TextField(
+                  controller: _titleController,
                   decoration: const InputDecoration(
                     labelText: 'Task title',
                     hintText: 'Enter task title',
@@ -114,6 +156,7 @@ class TodoHome extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 TextField(
+                  controller: _metadataController,
                   decoration: const InputDecoration(
                     labelText: 'Metadata (optional)',
                     hintText: 'Add optional notes',
@@ -123,7 +166,25 @@ class TodoHome extends StatelessWidget {
                 SizedBox(
                   height: 40,
                   child: FilledButton(
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: () {
+                      final title = _titleController.text.trim();
+                      if (title.isEmpty) return;
+
+                      setState(() {
+                        _tasks.insert(
+                          0,
+                          UiTask(
+                            title: title,
+                            metadata: _metadataController.text.trim(),
+                            done: false,
+                          ),
+                        );
+                      });
+
+                      _titleController.clear();
+                      _metadataController.clear();
+                      Navigator.of(sheetContext).pop();
+                    },
                     child: const Text('Add Task'),
                   ),
                 ),
@@ -141,7 +202,7 @@ class _TodoAppBarHookSlot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container();
+    return const SizedBox.shrink();
   }
 }
 
@@ -151,20 +212,8 @@ class _DashboardHookSlot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const KeyedSubtree(
-      key: ValueKey('todo.dashboard.cards'),
+      key: ValueKey(TodoHookZones.dashboardCards),
       child: SizedBox.shrink(),
     );
   }
-}
-
-class _TodoTask {
-  const _TodoTask({
-    required this.title,
-    required this.metadata,
-    required this.completed,
-  });
-
-  final String title;
-  final String metadata;
-  final bool completed;
 }
